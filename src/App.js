@@ -399,31 +399,43 @@ export default function App(){
   var SYS="You are an elite intelligence analyst for Iran conflict and threat monitoring with full web search access.\n\nYour job is to provide THOROUGH, DEEPLY RESEARCHED answers. For every query:\n1. Search the web extensively using multiple searches\n2. Cross-reference multiple sources\n3. Provide structured intelligence-grade analysis\n4. Include timeline of events where relevant\n5. Cite confidence level: HIGH MEDIUM or LOW\n6. Cite source tier: T1 major news, T2 regional outlets, T3 OSINT Telegram\n\nMONITORING SCOPE:\n- CORPORATE THREATS: Any tech company with Gulf or Israel presence - AWS, Google Cloud, Azure, Oracle, IBM, Meta, X, TikTok, Equinix, Cisco, SAP, PayPal, Stripe, Visa, submarine cables, CDN nodes, any company mentioned\n- INFRASTRUCTURE: Any named port, oil facility, airport, power grid, water, financial hub in UAE, Bahrain, Saudi, Kuwait, Israel\n- MISSILE AND DRONE: All events targeting Israel, UAE, Bahrain, Saudi, Kuwait\n- GENERAL: IRGC, Houthis, IDF, JCPOA, Hormuz, Natanz, Fordow, sanctions\n\nAlways search before answering. Never guess. If something is unverified say so clearly.\nCurrent date: "+new Date().toUTCString();
 
   function callAI(messages, onSuccess, onError){
-    if(!OPENROUTER_API_KEY){
-      onError("No API key set. Add your OpenRouter key in the code.");
-      return;
-    }
-    fetch("https://openrouter.ai/api/v1/chat/completions",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":"Bearer "+OPENROUTER_API_KEY,
-        "HTTP-Referer":"https://iranwarmonitor.vercel.app",
-        "X-Title":"Iran Intel Dashboard"
-      },
-      body:JSON.stringify({
-        model:"anthropic/claude-sonnet-4-5",
-        max_tokens:2000,
-        messages:messages
-      })
-    }).then(function(r){return r.json();}).then(function(d){
-      if(d.error){onError("API Error: "+d.error.message);return;}
-      var reply=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||"No response.";
-      onSuccess(reply);
-    }).catch(function(e){
-      onError("Connection error. Check your API key and internet connection.");
-    });
+  if(!OPENROUTER_API_KEY){
+    onError("No API key set. Add your OpenRouter key on line 3.");
+    return;
   }
+  var bodyMessages = messages.map(function(m){
+    return {role: m.role, content: m.content || m.text || ""};
+  });
+  fetch("https://openrouter.ai/api/v1/chat/completions",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+OPENROUTER_API_KEY,
+      "HTTP-Referer":"https://iranwarmonitor.vercel.app",
+      "X-Title":"Iran Intel Dashboard"
+    },
+    body:JSON.stringify({
+      model:"anthropic/claude-sonnet-4-5",
+      max_tokens:2000,
+      plugins:[{"id":"web","max_results":5}],
+      messages:bodyMessages
+    })
+  }).then(function(r){
+    if(!r.ok){
+      return r.json().then(function(e){
+        onError("API Error "+r.status+": "+(e.error&&e.error.message?e.error.message:JSON.stringify(e)));
+      });
+    }
+    return r.json().then(function(d){
+      var reply = d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+      if(!reply) onError("Empty response from API.");
+      else onSuccess(reply);
+    });
+  }).catch(function(e){
+    onError("Network error: "+e.message+". Check internet connection.");
+  });
+}
+
 
   function send(text){
     var q=(text||inp).trim();
