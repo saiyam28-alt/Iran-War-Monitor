@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const OPENROUTER_API_KEY = "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"; // paste your OpenRouter key here sk-or-...
+const OPENROUTER_API_KEY = "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"; // paste your OpenRouter key here sk-or-...
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap');`;
 
